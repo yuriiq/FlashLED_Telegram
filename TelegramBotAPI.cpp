@@ -22,14 +22,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 #include "TelegramBotAPI.h"
 
-// #define DEBUGV(...) Serial.printf(__VA_ARGS__) 
+#define DEBUGV(...) Serial.printf(__VA_ARGS__) 
 // ets_printf(__VA_ARGS__)
 
 #define host_ "api.telegram.org"
 const int sslPort_ = 443;
 const int bufferSize_ = 1024 ;
-const unsigned int readDelay_ = 1500;
-const unsigned int sendDelay_ = 2000;
+const unsigned int readDelay_ = 1800;
+const unsigned int sendDelay_ = 5000;
 const unsigned int maxMessageLength_ = 2000;
 const unsigned int maxResponse_ = 500;
 
@@ -275,9 +275,9 @@ void TelegramBotAPI::sendPostToTelegram(const JsonObject& payload) const {
         _client.println(head);
         _client.println();
         _client.println(data);
-        DEBUGV(head.c_str()) ;
-        DEBUGV("\n") ;
-        DEBUGV(data.c_str()) ;
+        //DEBUGV(head.c_str()) ;
+        //DEBUGV("\n") ;
+        //DEBUGV(data.c_str()) ;
       } else {
         DEBUGV(" Connect error! ");
       }

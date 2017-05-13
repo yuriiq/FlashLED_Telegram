@@ -18,7 +18,7 @@ TelegramBotAPI bot(BOTtoken, client);
 const unsigned int bot_mtbs =  3000; // mean time between scan messages
 unsigned long bot_lasttime = 0; // last time messages' scan has been done
 unsigned int recTime = 0;
-enum {noRec, loopRec, stopRec} recStatus = noRec; 
+enum {NoRec, LoopRec, StopRec} recStatus = NoRec; 
 
 void startCommand(const String & from_name) {
     const String welcome = "Привет, " + from_name + ". Я бот для проверки GSM.\n" \
@@ -49,6 +49,7 @@ void WiFiReconnect()
 void infoCommand() {
   //bot.message.text = gsm.info();
   //bot.sendMessage();
+  SDCardRW.infoFile("test2.wav");
 }
 
 void balanceCommand() {
@@ -77,7 +78,7 @@ void callCommand(const String & command) {
   ///// V test
   SDCardRW.startRec("test2.wav");
   recTime = millis() + timeout * 1000;
-  recStatus = loopRec;
+  recStatus = LoopRec;
   DEBUGV("start rec: %d (%d)\n", recTime, millis());
 }
 
@@ -99,20 +100,20 @@ void handleCommand() {
 
 void handleRecord() {
   switch (recStatus) {
-    case loopRec: 
+    case LoopRec: 
       SDCardRW.loopRec();
       if (recTime < millis()) {
         DEBUGV("stop!Rec\n");
+        SDCardRW.stopRec();
+        recStatus = StopRec;
         bot.message.text = "Дозвон окончен.";
         bot.sendMessage();
-        SDCardRW.stopRec();
-        recStatus = stopRec;
       }
       break;
-    case stopRec: 
+    case StopRec: 
       DEBUGV("stopRec\n");
       bot.sendAudio("test2.wav"); 
-      recStatus = noRec;
+      recStatus = NoRec;
       break;
   }
 }
@@ -124,13 +125,14 @@ void setup() {
 }
 
 void loop() {
-  if (recStatus == noRec && millis() > bot_lasttime + bot_mtbs)  {
+  if ((recStatus == NoRec) && (millis() > bot_lasttime + bot_mtbs))  {
     if (WL_CONNECTED == WiFi.status()) {
-      while (bot.getUpdates ()) {
+      if (bot.getUpdates ()) {
         handleCommand();
       }
       bot_lasttime = millis();
     } else WiFiReconnect();
-  } else handleRecord();
+  } 
+  if (recStatus != NoRec) handleRecord();
 }
 

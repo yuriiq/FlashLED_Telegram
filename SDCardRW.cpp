@@ -14,8 +14,8 @@ struct WavHeader
     const unsigned int subchunk1Size = 16;
     const unsigned short audioFormat = 1;
     const unsigned short numChannels = 1;
-    static const unsigned int sampleRate = 8000;
-    const unsigned int byteRate = 8000; // _header.byteRate = _header.sampleRate * _header.numChannels * _header.bitsPerSample/8;
+    const unsigned int sampleRate = UPDATE_RATE;
+    const unsigned int byteRate = UPDATE_RATE; // _header.byteRate = _header.sampleRate * _header.numChannels * _header.bitsPerSample/8;
     const unsigned short blockAlign = 1;
     const unsigned short bitsPerSample = 8;
     const char subchunk2Id[4] = { 'd', 'a', 't', 'a'} ;
@@ -25,7 +25,7 @@ struct WavHeader
 #define SDFileLog "SDLog.txt" 
 int _numSamples = -1; 
 const int _recBufSize = 512;
-const int sampleTime = ESP.getCpuFreqMHz() * 1000000 / WavHeader::sampleRate;
+const int sampleTime = ESP.getCpuFreqMHz() * 1000000 / UPDATE_RATE;
 uint8_t _recBuf[_recBufSize];
 unsigned int _now = 0;
 File _recFile;
@@ -58,6 +58,12 @@ void Settings::parse(char c) {
             buf = "";
             status = isPASS;
         }
+    }
+}
+
+SDCardRWClass::SDCardRWClass() { 
+    for (int i=0; i< _recBufSize; ++i) {
+        _recBuf [i] = 127;
     }
 }
 
@@ -109,8 +115,8 @@ void SDCardRWClass::stopRec() {
     WavHeader header;
     header.subchunk2Size = _numSamples * header.numChannels * header.bitsPerSample/8 + 512 - sizeof(WavHeader);
     header.chunkSize = header.subchunk2Size + 36; 
-    logToSD("StopRec at " + _numSamples, SDFileLog);
     int bufPos = _numSamples % _recBufSize;
+    logToSD(String("StopRec at ") + _numSamples + "; " + bufPos, SDFileLog);
     _recFile.write(_recBuf, bufPos);
     _recFile.flush();
     _recFile.seek(0);
@@ -123,7 +129,7 @@ void SDCardRWClass::stopRec() {
 
 void SDCardRWClass::startRec(const String & fileName) {
   _recFile.close();
-  _numSamples = 0; 
+  _numSamples = 512 - sizeof(WavHeader); 
   String recFileName = fileName;
   corectFileName(recFileName);
   _recFile = SD.open(recFileName, FILE_WRITE);
@@ -132,26 +138,22 @@ void SDCardRWClass::startRec(const String & fileName) {
     logToSD("Failed open file" + recFileName, SDFileLog);
     return;
   }  
-  WavHeader header;
-  header.subchunk2Size = 0;
-  header.chunkSize = 0;
   _recFile.seek(0);
-  _recFile.write ((const char *) & header, sizeof(WavHeader));
-  while (_recFile.position() < 512) _recFile.write((uint8_t)0); 
+  _recFile.write(_recBuf, _recBufSize);
   // start Interrupts
-  logToSD(String(sizeof(WavHeader)) + String(": start record to ") + _recFile.name() + "; time:" + sampleTime, SDFileLog);
+  logToSD(String(sizeof(WavHeader)) + String(": start record to ") + _recFile.name() , SDFileLog);
   _now = millis();
 }
 
 void SDCardRWClass::loopRec () {
-  if (_numSamples >= 0 && _recFile && ESP.getCycleCount() - _now >= sampleTime) {
-    _now = ESP.getCycleCount();
+  if (_numSamples >= 0 && millis() >= _now + sampleTime && _recFile) {
+    _now = millis();
     int a = analogRead(A0);
     a >>= 2;
     const int recBufPos = _numSamples % _recBufSize;
     _recBuf[recBufPos] = a;
     if (recBufPos >= _recBufSize - 1) {
-      const int writecount = _recFile.write(_recBuf, _recBufSize);
+      _recFile.write(_recBuf, _recBufSize);
     }
     ++ _numSamples;
   }
@@ -176,7 +178,7 @@ void corectFileName(String & fileName) {
   fileName.replace('"', '_');
 }
 
-void infoFile(const String & fileName)
+void SDCardRWClass::infoFile(const String & fileName)
 {
     File file = SD.open(fileName, FILE_READ);
     if (!file)
