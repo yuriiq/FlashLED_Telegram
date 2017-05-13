@@ -1,0 +1,23 @@
+o8  3V
+o9  GND
+o10 SCLK
+o11 MISO
+o12 MOSI
+o13 CS
+
+
+D1 GND
+E1 MISO
+F1 SCK
+G1 MOSI
+H1 CS
+I1 5V
+J1 3V
+K1 GND
+
+8 - J
+9 - K
+10 - F
+11 - E
+12 - G
+13 - H
