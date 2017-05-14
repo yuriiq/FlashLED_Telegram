@@ -8,7 +8,7 @@
 
 
 #define SETTINGS_FILE "settings.txt"
-#define BOTtoken "316201411:AAHL3pewSswc7-XHGcjmhx3gyu5DdvSSNdU" 
+#define BOTtoken "316201411:AAHL3pewSswc7-XHGcjmhx3gyu5DdvSSNdU"
 #define logFile  "datalog.txt"
 #define recFile  "test2.wav"
 
@@ -20,14 +20,14 @@ const unsigned int bot_mtbs =  3000; // mean time between scan messages
 unsigned long bot_lasttime = 0; // last time messages' scan has been done
 
 void startCommand(const String & from_name) {
-    const String welcome = "Привет, " + from_name + ". Я бот для проверки GSM.\n" \
-      "Это тестовая программа.\n\n" \
-      "/balance - узнать баланс\n"
-      "/info - служебная информация\n"
-      "/call <номер телефона> <время ожидания> - дозвон на номер"
-      ;
-    bot.message.text = welcome;
-    bot.sendMessage();
+  const String welcome = "Привет, " + from_name + ". Я бот для проверки GSM.\n" \
+                         "Это тестовая программа.\n\n" \
+                         "/balance - узнать баланс\n"
+                         "/info - служебная информация\n"
+                         "/call <номер телефона> <время ожидания> - дозвон на номер"
+                         ;
+  bot.message.text = welcome;
+  bot.sendMessage();
 }
 
 void WiFiReconnect()
@@ -51,8 +51,8 @@ void infoCommand() {
 }
 
 void balanceCommand() {
-    bot.message.text = gsm.balance();
-    bot.sendMessage();
+  bot.message.text = gsm.balance();
+  bot.sendMessage();
 }
 
 void callCommand(const String & command) {
@@ -65,47 +65,54 @@ void callCommand(const String & command) {
   }
   const int indexTime = command.indexOf(' ', index + 1);
   if (indexTime < 0) {
-      bot.message.text = errorMsg;
-      bot.sendMessage();
-      return;
+    bot.message.text = errorMsg;
+    bot.sendMessage();
+    return;
   }
   const String tell = command.substring(index, indexTime);
-  int timeout = command.substring(indexTime).toInt();
-  bot.message.text = String("Дозвон по номеру " + tell+ ", время ожидания: "+ timeout+ " сек.");
+  unsigned int timeout = command.substring(indexTime).toInt();
+  bot.message.text = String("Попытка дозвона на " + tell + ", ожидание: " + timeout + " сек.");
   bot.sendMessage();
   gsm.hangup();
   gsm.call(tell);
-  handleRecord(timeout * 1000);
+  SDCardRW.startRec(recFile);
+  DEBUGV("start rec: %d\n", millis());
+  gsm.updateMsg();
+  timeout *= 1000;
+  unsigned int now = millis();
+  while (gsm.updateMsg().length() < 1 && millis() < now + timeout) delay(10);
+  if (gsm.lastMsg().length() > 0)
+    handleRecord(timeout);
+  else 
+    handleRecord(1);
   gsm.hangup();
 }
 
 void recSendCommand() {
-  if (!bot.sendAudio(recFile)) {
+  if (!bot.sendAudio(recFile, SDCardRW.recSize (recFile))) {
     delay(10);
-    bot.message.text = "Скачать: /rec";
-    bot.sendMessage();    
+    bot.message.text = "Файл не загружен. Повтор: /rec";
+    bot.sendMessage();
   }
 }
 
 void handleCommand() {
-//  if (command.substring(0,4) == "http") bot.sendPhoto  (chat_id, command, command ); 
+  //  if (command.substring(0,4) == "http") bot.sendPhoto  (chat_id, command, command );
   const String & command = bot.message.text;
   const String & fromName = bot.message.from;
   SDCardRW.logToSD("Cmd from " + fromName + ": " + command + "\n", logFile);
   if (!bot.message.backMessageId) {
-      bot.sendChatAction(typing);  
+    bot.sendChatAction(typing);
   }
-  if (command == "/start") startCommand (fromName);  
+  if (command == "/start") startCommand (fromName);
   else if (command == "/balance") balanceCommand();
   else if (command == "/info") infoCommand();
   else if (command.startsWith("/call")) callCommand(command);
   else if (command.startsWith("/rec")) recSendCommand();
-  // else sendCommand  (bot.message.text);  
+  // else sendCommand  (bot.message.text);
 }
 
 void handleRecord(unsigned int timeout) {
-  SDCardRW.startRec(recFile);
-  DEBUGV("start rec: %d\n", millis());
   delay(timeout);
   DEBUGV("stopRec\n");
   SDCardRW.stopRec();
@@ -113,11 +120,11 @@ void handleRecord(unsigned int timeout) {
   bot.sendMessage();
   recSendCommand();
 }
-    
+
 void setup() {
   Serial.begin(9600);
   SDCardRW.setupSD();
-//  gsm.begin(9600);
+  gsm.begin(9600);
 }
 
 void loop() {
@@ -128,6 +135,6 @@ void loop() {
       }
       bot_lasttime = millis();
     } else WiFiReconnect();
-  } 
+  }
 }
 
