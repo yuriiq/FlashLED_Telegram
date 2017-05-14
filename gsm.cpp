@@ -15,17 +15,17 @@ GSM::GSM(int rx, int tx) : _port(rx, tx) {
 }
 
 void GSM::begin(long speed) {
-    _port.begin(speed);
-    int tryCount = tryCount_;     
-    while (!sendCommandAndWaitOK ("AT")) {
-      --tryCount;
-      if (tryCount < 0) {
-        DEBUGV("GSM Error!");
-        return;        
-      }
+  _port.begin(speed);
+  int tryCount = tryCount_;     
+  while (!sendCommandAndWaitOK ("AT")) {
+    --tryCount;
+    if (tryCount < 0) {
+      DEBUGV("GSM Error!");
+      return;        
     }
-    hangup();
-    sendCommandAndWaitOK ("AT+GSMBUSY=1");
+  }
+  hangup();
+  sendCommandAndWaitOK ("AT+GSMBUSY=1");
 }
 
 

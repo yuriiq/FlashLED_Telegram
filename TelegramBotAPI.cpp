@@ -235,7 +235,6 @@ void TelegramBotAPI::sendMediaToTelegram (const String & command, const String &
         uint8_t buffer[bufferSize_];
         readed = file.read(buffer, bufferSize_);
         _client.write(buffer, readed > fileSize ? fileSize : readed);
-        DEBUGV ("fsize=%d; %d\n" , fileSize, readed);
       }
       _client.print(end_request);
       DEBUGV (end_request.c_str());

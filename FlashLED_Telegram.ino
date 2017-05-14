@@ -45,6 +45,15 @@ void WiFiReconnect()
   SDCardRW.logToSD ("\nWiFi connected. IP address:" + WiFi.localIP().toString(), logFile) ;
 }
 
+void handleGSMMessage(const String & message) {
+  if (message.indexOf("NO DIALTONE") >= 0)     bot.message.text = "Нет сигнала";
+  else if (message.indexOf("BUSY") >= 0)       bot.message.text = "Вызов отклонён";
+//  else if (message.indexOf("NO CARRIER") >= 0) bot.message.text = "Повесили трубку";
+  else if (message.indexOf("NO ANSWER") >= 0)  bot.message.text = "Нет ответа";
+  else return;
+  bot.sendMessage();
+}
+
 void infoCommand() {
   bot.message.text = SDCardRW.infoFile(recFile);
   bot.sendMessage();
@@ -73,19 +82,13 @@ void callCommand(const String & command) {
   unsigned int timeout = command.substring(indexTime).toInt();
   bot.message.text = String("Попытка дозвона на " + tell + ", ожидание: " + timeout + " сек.");
   bot.sendMessage();
+  delay(10);
   gsm.hangup();
   gsm.call(tell);
-  SDCardRW.startRec(recFile);
-  DEBUGV("start rec: %d\n", millis());
-  gsm.updateMsg();
-  timeout *= 1000;
-  unsigned int now = millis();
-  while (gsm.updateMsg().length() < 1 && millis() < now + timeout) delay(10);
-  if (gsm.lastMsg().length() > 0)
-    handleRecord(timeout);
-  else 
-    handleRecord(1);
+  handleRecord(timeout*1000); 
+  const String msg = gsm.updateMsg();
   gsm.hangup();
+  handleGSMMessage(msg);
 }
 
 void recSendCommand() {
@@ -113,6 +116,8 @@ void handleCommand() {
 }
 
 void handleRecord(unsigned int timeout) {
+  SDCardRW.startRec(recFile);
+  DEBUGV("handleRecord\n" );
   delay(timeout);
   DEBUGV("stopRec\n");
   SDCardRW.stopRec();
@@ -122,9 +127,9 @@ void handleRecord(unsigned int timeout) {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(4800);
   SDCardRW.setupSD();
-  gsm.begin(9600);
+  gsm.begin(4800);
 }
 
 void loop() {
