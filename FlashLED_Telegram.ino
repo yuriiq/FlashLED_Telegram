@@ -10,6 +10,7 @@
 #define SETTINGS_FILE "settings.txt"
 #define BOTtoken "316201411:AAHL3pewSswc7-XHGcjmhx3gyu5DdvSSNdU" 
 #define logFile  "datalog.txt"
+#define recFile  "test2.wav"
 
 WiFiClientSecure client;
 TelegramBotAPI bot(BOTtoken, client);
@@ -17,8 +18,6 @@ TelegramBotAPI bot(BOTtoken, client);
 
 const unsigned int bot_mtbs =  3000; // mean time between scan messages
 unsigned long bot_lasttime = 0; // last time messages' scan has been done
-unsigned int recTime = 0;
-enum {NoRec, LoopRec, StopRec} recStatus = NoRec; 
 
 void startCommand(const String & from_name) {
     const String welcome = "Привет, " + from_name + ". Я бот для проверки GSM.\n" \
@@ -47,9 +46,8 @@ void WiFiReconnect()
 }
 
 void infoCommand() {
-  //bot.message.text = gsm.info();
-  //bot.sendMessage();
-  SDCardRW.infoFile("test2.wav");
+  bot.message.text = SDCardRW.infoFile(recFile);
+  bot.sendMessage();
 }
 
 void balanceCommand() {
@@ -75,11 +73,7 @@ void callCommand(const String & command) {
   int timeout = command.substring(indexTime).toInt();
   bot.message.text = String("Дозвон по номеру " + tell+ ", время ожидания: "+ timeout+ " сек.");
   bot.sendMessage();
-  ///// V test
-  SDCardRW.startRec("test2.wav");
-  recTime = millis() + timeout * 1000;
-  recStatus = LoopRec;
-  DEBUGV("start rec: %d (%d)\n", recTime, millis());
+  handleRecord(timeout*1000);
 }
 
 void handleCommand() {
@@ -87,7 +81,6 @@ void handleCommand() {
   const String & command = bot.message.text;
   const String & fromName = bot.message.from;
   SDCardRW.logToSD("Cmd from " + fromName + ": " + command + "\n", logFile);
-  
   if (!bot.message.backMessageId) {
       bot.sendChatAction(typing);  
   }
@@ -98,24 +91,15 @@ void handleCommand() {
   // else sendCommand  (bot.message.text);  
 }
 
-void handleRecord() {
-  switch (recStatus) {
-    case LoopRec: 
-      SDCardRW.loopRec();
-      if (recTime < millis()) {
-        DEBUGV("stop!Rec\n");
-        SDCardRW.stopRec();
-        recStatus = StopRec;
-        bot.message.text = "Дозвон окончен.";
-        bot.sendMessage();
-      }
-      break;
-    case StopRec: 
-      DEBUGV("stopRec\n");
-      bot.sendAudio("test2.wav"); 
-      recStatus = NoRec;
-      break;
-  }
+void handleRecord(unsigned int timeout) {
+  SDCardRW.startRec(recFile);
+  DEBUGV("start rec: %d\n", millis());
+  delay(timeout);
+  SDCardRW.stopRec();
+  DEBUGV("stopRec\n");
+  bot.message.text = "Дозвон окончен.";
+  bot.sendMessage();
+  bot.sendAudio(recFile); 
 }
     
 void setup() {
@@ -125,7 +109,7 @@ void setup() {
 }
 
 void loop() {
-  if ((recStatus == NoRec) && (millis() > bot_lasttime + bot_mtbs))  {
+  if ((millis() > bot_lasttime + bot_mtbs))  {
     if (WL_CONNECTED == WiFi.status()) {
       if (bot.getUpdates ()) {
         handleCommand();
@@ -133,6 +117,5 @@ void loop() {
       bot_lasttime = millis();
     } else WiFiReconnect();
   } 
-  if (recStatus != NoRec) handleRecord();
 }
 

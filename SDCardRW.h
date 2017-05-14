@@ -26,10 +26,9 @@ public:
   Settings getSettings(const String & fileName);
   void startRec(const String & fileName);
   void stopRec();
-  void loopRec();
   int samples();
   void setupSD();
-  void infoFile(const String & fileName);
+  String infoFile(const String & fileName);
 };
 
 extern SDCardRWClass SDCardRW;

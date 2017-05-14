@@ -32,7 +32,6 @@ File _recFile;
 
 void corectFileName(String & fileName); 
 void timerHandler ();
-void infoFile(const String & fileName);
 
 void Settings::parse(char c) {
     if (c == '\n') {
@@ -112,6 +111,7 @@ Settings SDCardRWClass::getSettings(const String & fileName)
 
 void SDCardRWClass::stopRec() {
   if (_numSamples > 0)  {
+    timer0_detachInterrupt();
     WavHeader header;
     header.subchunk2Size = _numSamples * header.numChannels * header.bitsPerSample/8 + 512 - sizeof(WavHeader);
     header.chunkSize = header.subchunk2Size + 36; 
@@ -143,11 +143,19 @@ void SDCardRWClass::startRec(const String & fileName) {
   // start Interrupts
   logToSD(String(sizeof(WavHeader)) + String(": start record to ") + _recFile.name() , SDFileLog);
   _now = millis();
+
+  noInterrupts();
+  timer0_isr_init();
+  timer0_attachInterrupt(timerHandler);
+  timer0_write(ESP.getCycleCount() + sampleTime);
+  interrupts();
 }
 
-void SDCardRWClass::loopRec () {
-  if (_numSamples >= 0 && millis() >= _now + sampleTime && _recFile) {
-    _now = millis();
+void timerHandler () {
+  timer0_write(ESP.getCycleCount() -1);
+  if (_numSamples > 0) 
+  {
+    unsigned int now  = ESP.getCycleCount();
     int a = analogRead(A0);
     a >>= 2;
     const int recBufPos = _numSamples % _recBufSize;
@@ -156,6 +164,8 @@ void SDCardRWClass::loopRec () {
       _recFile.write(_recBuf, _recBufSize);
     }
     ++ _numSamples;
+    DEBUGV(": %d\n" , ESP.getCycleCount() - now) ;
+    timer0_write(ESP.getCycleCount() + sampleTime);
   }
 }
 
@@ -178,38 +188,36 @@ void corectFileName(String & fileName) {
   fileName.replace('"', '_');
 }
 
-void SDCardRWClass::infoFile(const String & fileName)
+String SDCardRWClass::infoFile(const String & fileName)
 {
-    File file = SD.open(fileName, FILE_READ);
-    if (!file)
-    {
-        printf("Failed open file\n");
-        return ;
-    }
-    WavHeader header;
-    file.read (&header, sizeof(WavHeader));
-    // Выводим полученные данные
-
-    Serial.printf("chunkId: %c%c%c%c\n", header.chunkId[0], header.chunkId[1], header.chunkId[2], header.chunkId[3]);
-    Serial.printf("chunkSize: %d\n", header.chunkSize);      
-    Serial.printf("format: %c%c%c%c\n", header.format[0], header.format[1], header.format[2], header.format[3]);
-    Serial.printf("subchunk1Id: %c%c%c%c\n", header.subchunk1Id[0], header.subchunk1Id[1], header.subchunk1Id[2], header.subchunk1Id[3]);
-    Serial.printf("subchunk1Size: %d\n", header.subchunk1Size);  
-    Serial.printf("audioFormat: %d\n", header.audioFormat);    
-    Serial.printf("Channels: %d\n", header.numChannels);
-    Serial.printf("Sample rate: %d\n", header.sampleRate);
-    Serial.printf("byteRate: %d\n", header.byteRate);    
-    Serial.printf("blockAlign: %d\n", header.blockAlign);
-    Serial.printf("Bits per sample: %d\n", header.bitsPerSample);
-    Serial.printf("subchunk2Id: %c%c%c%c\n", header.subchunk2Id[0], header.subchunk2Id[1], header.subchunk2Id[2], header.subchunk2Id[3]);
-    Serial.printf("subchunk2Size: %d\n", header.subchunk2Size);
-
-    // Посчитаем длительность воспроизведения в секундах
-    double fDurationSeconds = 1.f * header.subchunk2Size / (header.bitsPerSample / 8) / header.numChannels / header.sampleRate;
-    int iDurationMinutes = floor(fDurationSeconds) / 60;
-    int iDurationSeconds = fDurationSeconds - (iDurationMinutes * 60);
-    Serial.printf("Duration: %02d:%02d \n", iDurationMinutes, iDurationSeconds);
-    file.close();
+  File file = SD.open(fileName, FILE_READ);
+  if (!file)
+  {
+      return "Failed open file";
+  }
+  WavHeader header;
+  file.read (&header, sizeof(WavHeader));
+  file.close();
+  // Посчитаем длительность воспроизведения в секундах
+  double fDurationSeconds = 1.f * header.subchunk2Size / (header.bitsPerSample / 8) / header.numChannels / header.sampleRate;
+  int iDurationMinutes = (int)fDurationSeconds / 60;
+  int iDurationSeconds = (int)fDurationSeconds % 60;
+  // Выводим полученные данные
+  String res = "chunkId: " + String(header.chunkId ).substring(0,3)
+  + "\n chunkSize: "       + String(header.chunkSize)
+  + "\n format: "          + String(header.format).substring(0,3)
+  + "\n subchunk1Id: "     + String(header.subchunk1Id).substring(0,3)
+  + "\n subchunk1Size: "   + String(header.subchunk1Size)
+  + "\n audioFormat: "     + String(header.audioFormat)
+  + "\n Channels: "        + String(header.numChannels)
+  + "\n Sample rate: "     + String(header.sampleRate)
+  + "\n byteRate: "        + String(header.byteRate)
+  + "\n blockAlign: "      + String(header.blockAlign)
+  + "\n Bits per sample: " + String(header.bitsPerSample)
+  + "\n subchunk2Id: "     + String(header.subchunk2Id).substring(0,3)
+  + "\n subchunk2Size: "   + String(header.subchunk2Size)
+  + "\n Duration: "        + String(iDurationMinutes) +":"+ String(iDurationSeconds);
+  return res;
 }
 
 SDCardRWClass SDCardRW;

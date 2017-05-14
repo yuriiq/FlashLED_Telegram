@@ -197,10 +197,12 @@ bool TelegramBotAPI::sendPostMessage(const JsonObject& payload) const {
       sendPostToTelegram(payload);
       const String data = readResponse(maxResponse_);
       if (checkResponse(data)) {
+        delay(1);
         return true;
       }
     }
   }
+  delay(1);
   return false;
 }
   
@@ -212,9 +214,11 @@ bool TelegramBotAPI::sendGetMessage(const String& getCommand) const {
     sendGetToTelegram(command);
     const String response = readResponse(maxResponse_);
     if (checkResponse(response)) {
+      delay(1);
       return true;
     }
   }
+  delay(1);
   return false;
 }
 
@@ -259,6 +263,7 @@ bool TelegramBotAPI::sendMediaToTelegram (const String & command, const String &
     DEBUGV(" Connect error! ");
     return false;
   }
+  delay(1);
   return true;
 }
 
@@ -319,6 +324,7 @@ String TelegramBotAPI::readResponse(unsigned int limit) const {
   }
   DEBUGV(" length: %d\n", response.length());
   DEBUGV("%s\n\n", response.c_str());
+  delay(1);
   return response;
 }
 
