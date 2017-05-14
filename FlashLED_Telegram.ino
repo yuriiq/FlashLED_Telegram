@@ -76,6 +76,14 @@ void callCommand(const String & command) {
   handleRecord(timeout*1000);
 }
 
+void recCommand() {
+  if (!bot.sendAudio(recFile)) {
+    delay(10);
+    bot.message.text = "Скачать: /rec";
+    bot.sendMessage();    
+  }
+}
+
 void handleCommand() {
 //  if (command.substring(0,4) == "http") bot.sendPhoto  (chat_id, command, command ); 
   const String & command = bot.message.text;
@@ -88,6 +96,7 @@ void handleCommand() {
   else if (command == "/balance") balanceCommand();
   else if (command == "/info") infoCommand();
   else if (command.startsWith("/call")) callCommand(command);
+  else if (command.startsWith("/rec")) recCommand();
   // else sendCommand  (bot.message.text);  
 }
 
@@ -97,13 +106,9 @@ void handleRecord(unsigned int timeout) {
   delay(timeout);
   DEBUGV("stopRec\n");
   SDCardRW.stopRec();
-  bot.message.text = "Дозвон окончен.";
+  bot.message.text = "Дозвон окончен";
   bot.sendMessage();
-  if (!bot.sendAudio(recFile)) {
-    delay(10);
-    bot.message.text = "Не удалось выгрузить файл.";
-    bot.sendMessage();    
-  }
+  recCommand();
 }
     
 void setup() {
