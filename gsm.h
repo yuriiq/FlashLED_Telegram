@@ -16,6 +16,7 @@ public:
     String info();
     String lastMsg() const;
     void hangup();
+    String updateMsg() ;
         
 private:
   void sendCommand (const char * command) ;

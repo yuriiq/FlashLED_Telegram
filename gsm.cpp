@@ -24,7 +24,14 @@ void GSM::begin(long speed) {
         return;        
       }
     }
+    hangup();
     sendCommandAndWaitOK ("AT+GSMBUSY=1");
+}
+
+
+String GSM::updateMsg() {
+  readResp(OKTime_);
+  return _buf;
 }
 
 String GSM::lastMsg() const {
