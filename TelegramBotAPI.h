@@ -49,7 +49,7 @@ class TelegramBotAPI
     bool sendGetMessage(const String& getCommand) const ;
     void sendGetToTelegram  (const String & command) const;
     void sendPostToTelegram(const JsonObject& payload) const ;
-    bool sendMediaToTelegram (const String & command, const String & properyName, const String & fileName, const String & contentType) const;
+    void sendMediaToTelegram (const String & command, const String & properyName, const String & fileName, const String & contentType) const;
     String readResponse (unsigned int limit) const ; 
     bool checkResponse(const String & response) const ;
     int getOffset(const String & response) const ;

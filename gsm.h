@@ -1,6 +1,7 @@
+
 #ifndef GSM_H
 #define GSM_H
-
+/*
 #include <SoftwareSerial.h>
 
 extern const char * GSMRecFileName;
@@ -24,5 +25,5 @@ private:
   String _buf;
 };
 
-
+*/
 #endif

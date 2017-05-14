@@ -1,3 +1,4 @@
+/*
 #include "gsm.h"
 #include "SDCardRW.h"
 
@@ -93,3 +94,4 @@ String GSM::getMessage( const char start, const char end, const int index) {
   if (i <= 0 || j <= 0) return String();
   return _buf.substring(i,j);
 }
+*/

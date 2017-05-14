@@ -1,24 +1,3 @@
-/*
-Copyright (c) 2015 Giancarlo Bacchio. All right reserved.
-
-TelegramBot - Library to create your own Telegram Bot using
-ESP8266 on Arduino IDE.
-Ref. Library at https:github/esp8266/Arduino
-
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
-*/
 
 #include "TelegramBotAPI.h"
 
@@ -26,12 +5,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 // ets_printf(__VA_ARGS__)
 
 #define host_ "api.telegram.org"
-const int sslPort_ = 443;
-const int bufferSize_ = 1024 ;
-const unsigned int readDelay_ = 1800;
-const unsigned int sendDelay_ = 5000;
-const unsigned int maxMessageLength_ = 2000;
-const unsigned int maxResponse_ = 500;
+const byte tryCount_ = 5;
+const unsigned short sslPort_ = 443;
+const unsigned short bufferSize_ = 1024 ;
+const unsigned short readDelay_ = 1800;
+const unsigned short sendDelay_ = 5000;
+const unsigned short maxMessageLength_ = 2000;
+const unsigned short maxResponse_ = 500;
 
 TelegramBotAPI::TelegramBotAPI (const String & token, Client & client)
   : _token (token), _client (client), _offset(0)  {}
@@ -51,10 +31,10 @@ bool TelegramBotAPI::getUpdates() {
     DynamicJsonBuffer jsonBuffer;
     const JsonObject& root = jsonBuffer.parseObject(response);
     if (root.success() && root.containsKey("result")) {
-        const int resultArrayLength = root["result"].size();
+        const unsigned int resultArrayLength = root["result"].size();
         if (resultArrayLength > 0 ) {
           const JsonObject& resultItem = root["result"][0];
-          const unsigned long update_id = resultItem["update_id"];
+          const unsigned int update_id = resultItem["update_id"];
           _offset = update_id + 1;
           if (resultItem.containsKey("callback_query")) {
             const JsonObject& jMessage = resultItem["callback_query"] ;
@@ -116,14 +96,16 @@ bool TelegramBotAPI::sendMessage (const char * parse_mode) const {
 
 bool TelegramBotAPI::sendAudio(const String & fileName) const {
   sendChatAction(upload_audio);
-  if (sendMediaToTelegram ("sendAudio", "audio", fileName, "audio/wav" )) {
-    const String response = readResponse(maxResponse_);
-    if (checkResponse(response)) {
-      return true;
-    } else {
-      return false;
-    }
-  } 
+  const int index = fileName.lastIndexOf('.') + 1;
+  if (index <= 0) return false;
+  const String contentType = "audio/" + fileName.substring(index);
+  sendMediaToTelegram ("sendAudio", "audio", fileName, contentType);
+  const String response = readResponse(maxResponse_);
+  if (checkResponse(response)) {
+    return true;
+  } else {
+    return false;
+  }
   return false;
 }
 
@@ -132,14 +114,13 @@ bool TelegramBotAPI::sendPhoto(const String & fileName) const {
   const int index = fileName.lastIndexOf('.') + 1;
   if (index <= 0) return false;
   const String contentType = "image/" + fileName.substring(index);
-  if (sendMediaToTelegram ("sendPhoto", "photo", fileName, contentType)) {
-    const String response = readResponse(maxResponse_);
-    if (checkResponse(response)) {
-      return true;
-    } else {
-      return false;
-    }
-  } 
+  sendMediaToTelegram ("sendPhoto", "photo", fileName, contentType) ;
+  const String response = readResponse(maxResponse_);
+  if (checkResponse(response)) {
+    return true;
+  } else {
+    return false;
+  }
   return false;
 }
 bool TelegramBotAPI::sendMessageWithKeyboard (const JsonArray & keyboardBuffer, KeyboardType keyboardType) const {
@@ -197,12 +178,10 @@ bool TelegramBotAPI::sendPostMessage(const JsonObject& payload) const {
       sendPostToTelegram(payload);
       const String data = readResponse(maxResponse_);
       if (checkResponse(data)) {
-        delay(1);
         return true;
       }
     }
   }
-  delay(1);
   return false;
 }
   
@@ -214,63 +193,64 @@ bool TelegramBotAPI::sendGetMessage(const String& getCommand) const {
     sendGetToTelegram(command);
     const String response = readResponse(maxResponse_);
     if (checkResponse(response)) {
-      delay(1);
       return true;
     }
   }
-  delay(1);
   return false;
 }
 
-bool TelegramBotAPI::sendMediaToTelegram (const String & command, const String & binaryProperyName, 
+void TelegramBotAPI::sendMediaToTelegram (const String & command, const String & binaryProperyName, 
                                           const String & fileName, const String & contentType ) const {
   DEBUGV(":sendMediaToTelegram ");
   File file = SD.open(fileName, FILE_READ);
   if (!file) {
     DEBUGV("Error to open %s\n", fileName.c_str());
-    return false; 
+    return ; 
   }
   String boundry = "------------------------b8f610217e83e29b";
-  if (_client.connected() || _client.connect(host_, sslPort_)) {
-    String start_request = "--" + boundry + "\r\n" 
-        + "content-disposition: form-data; name=\"chat_id\"\r\n\r\n"
-        + message.chatId + "\r\n"
-        + "--" + boundry + "\r\n"
-        + "content-disposition: form-data; name=\"" + binaryProperyName + "\"; filename=\"" + fileName + "\"\r\n"
-        + "Content-Type: " + contentType + "\r\n\r\n" 
-        ;
-    String end_request = "\r\n--" + boundry + "--\r\n";
-    _client.print("POST /bot"+_token+"/" + command); _client.println(" HTTP/1.1");
-    // Host header
-    _client.print("Host: "); _client.println(host_);
-    _client.println("User-Agent: arduino/1.0");
-    _client.println("Accept: */*");
-    int contentLength = file.size() + start_request.length() + end_request.length();
-    DEBUGV("Content-Length: %d\n", contentLength);
-    _client.print("Content-Length: "); _client.println(String(contentLength));
-    _client.println("Content-Type: multipart/form-data; boundary=" + boundry);
-    _client.println("");
-    _client.print(start_request);
-    DEBUGV (start_request.c_str());
-    while (file.available() > 0) {
-      uint8_t buffer[bufferSize_];
-      int readed = file.read(buffer, bufferSize_);
-      _client.write(buffer, readed);
+  for (byte i=0; i < tryCount_; ++i) {
+    if (_client.connected() || _client.connect(host_, sslPort_)) {
+      i = tryCount_;
+      String start_request = "--" + boundry + "\r\n" 
+          + "content-disposition: form-data; name=\"chat_id\"\r\n\r\n"
+          + message.chatId + "\r\n"
+          + "--" + boundry + "\r\n"
+          + "content-disposition: form-data; name=\"" + binaryProperyName + "\"; filename=\"" + fileName + "\"\r\n"
+          + "Content-Type: " + contentType + "\r\n\r\n" 
+          ;
+      String end_request = "\r\n--" + boundry + "--\r\n";
+      _client.print("POST /bot"+_token+"/" + command); _client.println(" HTTP/1.1");
+      // Host header
+      _client.print("Host: "); _client.println(host_);
+      _client.println("User-Agent: arduino/1.0");
+      _client.println("Accept: */*");
+      const unsigned int contentLength = file.size() + start_request.length() + end_request.length();
+      DEBUGV("Content-Length: %d\n", contentLength);
+      _client.print("Content-Length: "); _client.println(String(contentLength));
+      _client.println("Content-Type: multipart/form-data; boundary=" + boundry);
+      _client.println("");
+      _client.print(start_request);
+      DEBUGV (start_request.c_str());
+      while (file.available() > 0) {
+        uint8_t buffer[bufferSize_];
+        const unsigned int readed = file.read(buffer, bufferSize_);
+        _client.write(buffer, readed);
+      }
+      _client.print(end_request);
+      DEBUGV (end_request.c_str());
+    } else {
+      delay(10);
+      DEBUGV(" Connect error! ");
     }
-    _client.print(end_request);
-    DEBUGV (end_request.c_str());
-  } else {
-    DEBUGV(" Connect error! ");
-    return false;
   }
-  delay(1);
-  return true;
 }
 
 void TelegramBotAPI::sendPostToTelegram(const JsonObject& payload) const {
   DEBUGV(":SendPostLight ");
   if (payload.containsKey("text")) {
+    for (byte i = 0; i< tryCount_; ++i)
 	    if (_client.connected() || _client.connect(host_, sslPort_)) {
+        i = tryCount_;
         String data;
         payload.printTo(data);
         String head = "POST /bot" + _token + (payload.containsKey("message_id") ? "/editMessageText" : "/sendMessage") + " HTTP/1.1"
@@ -284,6 +264,7 @@ void TelegramBotAPI::sendPostToTelegram(const JsonObject& payload) const {
         //DEBUGV("\n") ;
         //DEBUGV(data.c_str()) ;
       } else {
+        delay(10);
         DEBUGV(" Connect error! ");
       }
   } else {
@@ -294,13 +275,15 @@ void TelegramBotAPI::sendPostToTelegram(const JsonObject& payload) const {
 void TelegramBotAPI::sendGetToTelegram(const String & command) const {
   DEBUGV(":SendGetToTelegram: %s \n", command.c_str());
 	// Connect with api.telegram.org
-	if (_client.connected() || _client.connect(host_, sslPort_)) {
-		DEBUGV("Connect OK.\n");
-		_client.println("GET /" + command);
-    _client.flush();
-	} else {
-    DEBUGV("Connect ERROR!\n");
-  }
+  for (byte i=0; i<tryCount_; ++i)
+  	if (_client.connected() || _client.connect(host_, sslPort_)) {
+      i = tryCount_;
+  		DEBUGV("Connect OK.\n");
+  		_client.println("GET /" + command);
+  	} else {
+      delay(10);
+      DEBUGV("Connect ERROR!\n");
+    }
 }
 
 String TelegramBotAPI::readResponse(unsigned int limit) const {
@@ -324,7 +307,6 @@ String TelegramBotAPI::readResponse(unsigned int limit) const {
   }
   DEBUGV(" length: %d\n", response.length());
   DEBUGV("%s\n\n", response.c_str());
-  delay(1);
   return response;
 }
 

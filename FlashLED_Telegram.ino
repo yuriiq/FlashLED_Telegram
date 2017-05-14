@@ -95,11 +95,15 @@ void handleRecord(unsigned int timeout) {
   SDCardRW.startRec(recFile);
   DEBUGV("start rec: %d\n", millis());
   delay(timeout);
-  SDCardRW.stopRec();
   DEBUGV("stopRec\n");
+  SDCardRW.stopRec();
   bot.message.text = "Дозвон окончен.";
   bot.sendMessage();
-  bot.sendAudio(recFile); 
+  if (!bot.sendAudio(recFile)) {
+    delay(10);
+    bot.message.text = "Не удалось выгрузить файл.";
+    bot.sendMessage();    
+  }
 }
     
 void setup() {

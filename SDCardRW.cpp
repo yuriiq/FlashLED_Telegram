@@ -24,10 +24,7 @@ struct WavHeader
 
 #define SDFileLog "SDLog.txt" 
 int _numSamples = -1; 
-const int _recBufSize = 512;
 const int sampleTime = ESP.getCpuFreqMHz() * 1000000 / UPDATE_RATE;
-uint8_t _recBuf[_recBufSize];
-unsigned int _now = 0;
 File _recFile;
 
 void corectFileName(String & fileName); 
@@ -61,9 +58,6 @@ void Settings::parse(char c) {
 }
 
 SDCardRWClass::SDCardRWClass() { 
-    for (int i=0; i< _recBufSize; ++i) {
-        _recBuf [i] = 127;
-    }
 }
 
 void SDCardRWClass::setupSD() {
@@ -115,57 +109,48 @@ void SDCardRWClass::stopRec() {
     WavHeader header;
     header.subchunk2Size = _numSamples * header.numChannels * header.bitsPerSample/8 + 512 - sizeof(WavHeader);
     header.chunkSize = header.subchunk2Size + 36; 
-    int bufPos = _numSamples % _recBufSize;
-    logToSD(String("StopRec at ") + _numSamples + "; " + bufPos, SDFileLog);
-    _recFile.write(_recBuf, bufPos);
-    _recFile.flush();
+    // logToSD(String("StopRec at ") + _numSamples , SDFileLog);
     _recFile.seek(0);
     _recFile.write ((const char *) & header, sizeof(WavHeader));
     _recFile.close();
     _numSamples = -1;
-    // infoFile(_recFile.name());
+    delay(10);
+    logToSD(infoFile(_recFile.name()), SDFileLog);
   }
 }
 
-void SDCardRWClass::startRec(const String & fileName) {
+bool SDCardRWClass::startRec(const String & fileName) {
   _recFile.close();
-  _numSamples = 512 - sizeof(WavHeader); 
+  _numSamples = 0; 
   String recFileName = fileName;
   corectFileName(recFileName);
   _recFile = SD.open(recFileName, FILE_WRITE);
   if (!_recFile)
   {
     logToSD("Failed open file" + recFileName, SDFileLog);
-    return;
-  }  
+    return false;
+  }
+  WavHeader header; 
   _recFile.seek(0);
-  _recFile.write(_recBuf, _recBufSize);
+  _recFile.write((uint8_t*)& header, sizeof(WavHeader));
   // start Interrupts
   logToSD(String(sizeof(WavHeader)) + String(": start record to ") + _recFile.name() , SDFileLog);
-  _now = millis();
-
   noInterrupts();
   timer0_isr_init();
   timer0_attachInterrupt(timerHandler);
   timer0_write(ESP.getCycleCount() + sampleTime);
   interrupts();
+  return true;
 }
 
 void timerHandler () {
   timer0_write(ESP.getCycleCount() -1);
-  if (_numSamples > 0) 
+  if (_numSamples >= 0) 
   {
-    unsigned int now  = ESP.getCycleCount();
-    int a = analogRead(A0);
-    a >>= 2;
-    const int recBufPos = _numSamples % _recBufSize;
-    _recBuf[recBufPos] = a;
-    if (recBufPos >= _recBufSize - 1) {
-      _recFile.write(_recBuf, _recBufSize);
-    }
-    ++ _numSamples;
-    DEBUGV(": %d\n" , ESP.getCycleCount() - now) ;
     timer0_write(ESP.getCycleCount() + sampleTime);
+    unsigned int a = analogRead(A0);
+    _recFile.write((const unsigned char) a);
+    ++ _numSamples;
   }
 }
 
