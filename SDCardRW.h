@@ -29,6 +29,7 @@ public:
   int samples();
   void setupSD();
   String infoFile(const String & fileName);
+  unsigned int recSize (const String & fileName);
 };
 
 extern SDCardRWClass SDCardRW;

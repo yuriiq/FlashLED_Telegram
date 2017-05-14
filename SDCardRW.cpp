@@ -102,7 +102,7 @@ Settings SDCardRWClass::getSettings(const String & fileName)
   logToSD(String("Settings in ") + fileName +"\n"+ settings.toString(), SDFileLog);
   return settings;
 }
-
+  
 void SDCardRWClass::stopRec() {
   if (_numSamples > 0)  {
     timer0_detachInterrupt();
@@ -171,6 +171,19 @@ void corectFileName(String & fileName) {
   fileName.replace('\\', '_');
   fileName.replace('|', '_');
   fileName.replace('"', '_');
+}
+
+unsigned int SDCardRWClass::recSize (const String & fileName)
+{
+  File file = SD.open(fileName, FILE_READ);
+  if (!file)
+  {
+      return -1;
+  }
+  WavHeader header;
+  file.read (&header, sizeof(WavHeader));
+  file.close();
+  return header.chunkSize + 8; 
 }
 
 String SDCardRWClass::infoFile(const String & fileName)
