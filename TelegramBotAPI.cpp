@@ -1,7 +1,7 @@
 
 #include "TelegramBotAPI.h"
 
-// #define DEBUGV(...) Serial.printf(__VA_ARGS__) 
+#define DEBUGV(...) Serial.printf(__VA_ARGS__) 
 // ets_printf(__VA_ARGS__)
 
 #define host_ "api.telegram.org"
@@ -94,12 +94,12 @@ bool TelegramBotAPI::sendMessage (const char * parse_mode) const {
   return sendPostMessage(payload);
 }
 
-bool TelegramBotAPI::sendAudio(const String & fileName) const {
+bool TelegramBotAPI::sendAudio(const String & fileName, int fileSize) const {
   sendChatAction(upload_audio);
   const int index = fileName.lastIndexOf('.') + 1;
   if (index <= 0) return false;
   const String contentType = "audio/" + fileName.substring(index);
-  sendMediaToTelegram ("sendAudio", "audio", fileName, contentType);
+  sendMediaToTelegram ("sendAudio", "audio", fileName, contentType, fileSize);
   const String response = readResponse(maxResponse_);
   if (checkResponse(response)) {
     return true;
@@ -109,12 +109,12 @@ bool TelegramBotAPI::sendAudio(const String & fileName) const {
   return false;
 }
 
-bool TelegramBotAPI::sendPhoto(const String & fileName) const {
+bool TelegramBotAPI::sendPhoto(const String & fileName, int fileSize) const {
   sendChatAction(upload_photo);
   const int index = fileName.lastIndexOf('.') + 1;
   if (index <= 0) return false;
   const String contentType = "image/" + fileName.substring(index);
-  sendMediaToTelegram ("sendPhoto", "photo", fileName, contentType) ;
+  // sendMediaToTelegram ("sendPhoto", "photo", fileName, contentType) ;
   const String response = readResponse(maxResponse_);
   if (checkResponse(response)) {
     return true;
@@ -200,7 +200,7 @@ bool TelegramBotAPI::sendGetMessage(const String& getCommand) const {
 }
 
 void TelegramBotAPI::sendMediaToTelegram (const String & command, const String & binaryProperyName, 
-                                          const String & fileName, const String & contentType ) const {
+                                          const String & fileName, const String & contentType, int fileSize) const {
   DEBUGV(":sendMediaToTelegram ");
   File file = SD.open(fileName, FILE_READ);
   if (!file) {
@@ -224,17 +224,18 @@ void TelegramBotAPI::sendMediaToTelegram (const String & command, const String &
       _client.print("Host: "); _client.println(host_);
       _client.println("User-Agent: arduino/1.0");
       _client.println("Accept: */*");
-      const unsigned int contentLength = file.size() + start_request.length() + end_request.length();
+      const unsigned int contentLength = fileSize + start_request.length() + end_request.length();
       DEBUGV("Content-Length: %d\n", contentLength);
       _client.print("Content-Length: "); _client.println(String(contentLength));
       _client.println("Content-Type: multipart/form-data; boundary=" + boundry);
       _client.println("");
       _client.print(start_request);
       DEBUGV (start_request.c_str());
-      while (file.available() > 0) {
+      for (int readed = 1; fileSize > 0 && readed > 0; fileSize -= readed) {
         uint8_t buffer[bufferSize_];
-        const unsigned int readed = file.read(buffer, bufferSize_);
-        _client.write(buffer, readed);
+        readed = file.read(buffer, bufferSize_);
+        _client.write(buffer, readed > fileSize ? fileSize : readed);
+        DEBUGV ("fsize=%d; %d\n" , fileSize, readed);
       }
       _client.print(end_request);
       DEBUGV (end_request.c_str());

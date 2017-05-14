@@ -173,7 +173,7 @@ void corectFileName(String & fileName) {
   fileName.replace('"', '_');
 }
 
-unsigned int SDCardRWClass::recSize (const String & fileName)
+int SDCardRWClass::recSize (const String & fileName)
 {
   File file = SD.open(fileName, FILE_READ);
   if (!file)

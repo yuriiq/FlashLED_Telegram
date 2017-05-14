@@ -39,8 +39,8 @@ class TelegramBotAPI
     TelegramBotAPI (const String & token, Client & client);
     bool getUpdates();
     bool sendMessage (const char * parse_mode = NULL) const;
-    bool sendAudio(const String & fileName) const ;
-    bool sendPhoto(const String & fileName) const ;
+    bool sendAudio(const String & fileName, int fileSize) const ;
+    bool sendPhoto(const String & fileName, int fileSize) const ;
     bool sendMessageWithKeyboard(const JsonArray & keyboardBuffer, KeyboardType keyboardType) const;
     bool sendChatAction(ActionType action) const;   
     TelegramMessage message;
@@ -49,7 +49,7 @@ class TelegramBotAPI
     bool sendGetMessage(const String& getCommand) const ;
     void sendGetToTelegram  (const String & command) const;
     void sendPostToTelegram(const JsonObject& payload) const ;
-    void sendMediaToTelegram (const String & command, const String & properyName, const String & fileName, const String & contentType) const;
+    void sendMediaToTelegram (const String & command, const String & properyName, const String & fileName, const String & contentType, int fileSize) const;
     String readResponse (unsigned int limit) const ; 
     bool checkResponse(const String & response) const ;
     int getOffset(const String & response) const ;
