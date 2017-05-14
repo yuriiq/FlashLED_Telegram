@@ -9,7 +9,6 @@
 
 #define SETTINGS_FILE "settings.txt"
 #define BOTtoken "316201411:AAHL3pewSswc7-XHGcjmhx3gyu5DdvSSNdU"
-#define logFile  "datalog.txt"
 #define recFile  "test2.wav"
 
 WiFiClientSecure client;
@@ -24,7 +23,7 @@ void startCommand(const String & from_name) {
                          "Это тестовая программа.\n\n" \
                          "/balance - узнать баланс\n"
                          "/info - служебная информация\n"
-                         "/call <номер телефона> <время ожидания> - дозвон на номер"
+                         "/call <номер> <время> - дозвон на номер"
                          ;
   bot.message.text = welcome;
   bot.sendMessage();
@@ -42,16 +41,18 @@ void WiFiReconnect()
   while (WiFi.status() != WL_CONNECTED) {
     DEBUGV("."); delay(500);
   }
-  SDCardRW.logToSD ("\nWiFi connected. IP address:" + WiFi.localIP().toString(), logFile) ;
+  DEBUGV("%s\n", WiFi.localIP().toString().c_str()); 
 }
 
 void handleGSMMessage(const String & message) {
+  /*
   if (message.indexOf("NO DIALTONE") >= 0)     bot.message.text = "Нет сигнала";
   else if (message.indexOf("BUSY") >= 0)       bot.message.text = "Вызов отклонён";
 //  else if (message.indexOf("NO CARRIER") >= 0) bot.message.text = "Повесили трубку";
   else if (message.indexOf("NO ANSWER") >= 0)  bot.message.text = "Нет ответа";
   else return;
   bot.sendMessage();
+  */
 }
 
 void infoCommand() {
@@ -80,14 +81,16 @@ void callCommand(const String & command) {
   }
   const String tell = command.substring(index, indexTime);
   unsigned int timeout = command.substring(indexTime).toInt();
-  bot.message.text = String("Попытка дозвона на " + tell + ", ожидание: " + timeout + " сек.");
+  bot.message.text = String("Попытка дозвона на " + tell + ", ожидание: " + timeout + " сек");
   bot.sendMessage();
-  delay(10);
-  gsm.hangup();
-  gsm.call(tell);
-  handleRecord(timeout*1000); 
-  const String msg = gsm.updateMsg();
-  gsm.hangup();
+  SDCardRW.startRec(recFile);
+  DEBUGV("startRec\n" );
+  const String msg = gsm.call(tell, timeout*1000);
+  DEBUGV("stopRec\n");
+  SDCardRW.stopRec();
+  bot.message.text = "Дозвон окончен";
+  bot.sendMessage();
+  recSendCommand();
   handleGSMMessage(msg);
 }
 
@@ -103,7 +106,6 @@ void handleCommand() {
   //  if (command.substring(0,4) == "http") bot.sendPhoto  (chat_id, command, command );
   const String & command = bot.message.text;
   const String & fromName = bot.message.from;
-  SDCardRW.logToSD("Cmd from " + fromName + ": " + command + "\n", logFile);
   if (!bot.message.backMessageId) {
     bot.sendChatAction(typing);
   }
@@ -113,17 +115,6 @@ void handleCommand() {
   else if (command.startsWith("/call")) callCommand(command);
   else if (command.startsWith("/rec")) recSendCommand();
   // else sendCommand  (bot.message.text);
-}
-
-void handleRecord(unsigned int timeout) {
-  SDCardRW.startRec(recFile);
-  DEBUGV("handleRecord\n" );
-  delay(timeout);
-  DEBUGV("stopRec\n");
-  SDCardRW.stopRec();
-  bot.message.text = "Дозвон окончен";
-  bot.sendMessage();
-  recSendCommand();
 }
 
 void setup() {

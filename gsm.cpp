@@ -14,18 +14,19 @@ GSM::GSM(int rx, int tx) : _port(rx, tx) {
 
 }
 
-void GSM::begin(long speed) {
+bool GSM::begin(long speed) {
   _port.begin(speed);
   int tryCount = tryCount_;     
   while (!sendCommandAndWaitOK ("AT")) {
     --tryCount;
     if (tryCount < 0) {
       DEBUGV("GSM Error!");
-      return;        
+      return false;        
     }
   }
   hangup();
   sendCommandAndWaitOK ("AT+GSMBUSY=1");
+  return true;
 }
 
 
@@ -38,16 +39,17 @@ String GSM::lastMsg() const {
     return _buf;
 }
 
-void GSM::call(const String & tell) {
+String GSM::call(const String & tell, int timeout) {
   DEBUGV("call %s; ", tell.c_str()) ;
-  sendCommand (String("ATD" +tell+";").c_str());
-  delay(OKTime_);
+  sendCommandAndWaitOK (String("ATD" +tell+";").c_str()); 
+  delay(timeout);
   readResp(OKTime_);
+  String res = _buf;
+  sendCommandAndWaitOK ("ATH0");
+  return res;
 }
 void GSM::hangup() {
-  sendCommand ("ATH0");
-  delay(OKTime_);
-  readResp(OKTime_);
+  sendCommandAndWaitOK ("ATH0");
 }
 
 String GSM::info() {

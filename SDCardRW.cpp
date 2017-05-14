@@ -72,19 +72,9 @@ int SDCardRWClass::samples() {
   return _numSamples; 
 }
 
-void SDCardRWClass::logToSD ( const String & msg, String fileName) {
-  corectFileName(fileName);
-  File dataFile = SD.open(fileName, FILE_WRITE);
-  if (dataFile) {
-      dataFile.println(String(millis()) +": "+ msg + "\n");
-      dataFile.close();
-  }
-  DEBUGV("%s\n" , msg.c_str()) ;
-}
-
 Settings SDCardRWClass::getSettings(const String & fileName)
 {
-  logToSD("Get settings from " + fileName , SDFileLog);
+  DEBUGV("Get settings from %s\n" , fileName.c_str());
   Settings settings;
   File dataFile = SD.open(fileName, FILE_READ);
   if (dataFile) {
@@ -94,12 +84,12 @@ Settings SDCardRWClass::getSettings(const String & fileName)
       }
       dataFile.close();
   } else {
-      logToSD("Error to load " +fileName + ". Create default." , SDFileLog);
+      DEBUGV("Error to load %s, create default\n", fileName.c_str() );
       dataFile = SD.open(fileName, FILE_WRITE);
       dataFile.println(settings.toString());
       dataFile.close();
   }
-  logToSD(String("Settings in ") + fileName +"\n"+ settings.toString(), SDFileLog);
+  DEBUGV("Settings in %s\n%s\n", fileName.c_str() , settings.toString().c_str());
   return settings;
 }
   
@@ -115,7 +105,7 @@ void SDCardRWClass::stopRec() {
     _recFile.close();
     _numSamples = -1;
     delay(10);
-    logToSD(infoFile(_recFile.name()), SDFileLog);
+    DEBUGV("%s\n", infoFile(_recFile.name()).c_str());
   }
 }
 
@@ -127,14 +117,14 @@ bool SDCardRWClass::startRec(const String & fileName) {
   _recFile = SD.open(recFileName, FILE_WRITE);
   if (!_recFile)
   {
-    logToSD("Failed open file" + recFileName, SDFileLog);
+    DEBUGV("Failed open file %d\n", recFileName.c_str());
     return false;
   }
   WavHeader header; 
   _recFile.seek(0);
   _recFile.write((uint8_t*)& header, sizeof(WavHeader));
   // start Interrupts
-  logToSD(String(sizeof(WavHeader)) + String(": start record to ") + _recFile.name() , SDFileLog);
+  DEBUGV(": start record to %s\n", _recFile.name());
   noInterrupts();
   timer0_isr_init();
   timer0_attachInterrupt(timerHandler);

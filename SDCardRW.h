@@ -22,7 +22,6 @@ class SDCardRWClass
 {
 public:
   SDCardRWClass() ;
-  void logToSD (const String & msg, String fileName) ;
   Settings getSettings(const String & fileName);
   bool startRec(const String & fileName);
   void stopRec();

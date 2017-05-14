@@ -10,8 +10,8 @@ class GSM
 {
 public:
     GSM(int rx, int tx);
-    void begin(long speed);
-    void call(const String & tell);
+    bool begin(long speed);
+    String call(const String & tell, int timeout);
     String balance();
     String info();
     String lastMsg() const;
