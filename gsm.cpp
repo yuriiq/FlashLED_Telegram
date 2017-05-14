@@ -1,12 +1,14 @@
-/*
+
 #include "gsm.h"
-#include "SDCardRW.h"
+#include <Arduino.h>
+
+#define DEBUGV(...) Serial.printf(__VA_ARGS__) 
 
 const int USSDTime_ = 1000;
 const int OKTime_ = 100;
 const int tryCount_ = 5;  
-const char * gsmLog = "GSMLOG.txt";
-const char * GSMRecFileName = "tell.wav";
+
+
 
 GSM::GSM(int rx, int tx) : _port(rx, tx) { 
 
@@ -18,7 +20,7 @@ void GSM::begin(long speed) {
     while (!sendCommandAndWaitOK ("AT")) {
       --tryCount;
       if (tryCount < 0) {
-        SDCardRW.logToSD ("GSM Error!", gsmLog) ;
+        DEBUGV("GSM Error!");
         return;        
       }
     }
@@ -29,26 +31,27 @@ String GSM::lastMsg() const {
     return _buf;
 }
 
-void GSM::call(const String & tell, int timeout) {
-  SDCardRW.logToSD ("call "+ tell, gsmLog) ;
-  SDCardRW.startRec(GSMRecFileName);
+void GSM::call(const String & tell) {
+  DEBUGV("call %s; ", tell.c_str()) ;
   sendCommand (String("ATD" +tell+";").c_str());
-  delay(timeout);
+  delay(OKTime_);
+  readResp(OKTime_);
+}
+void GSM::hangup() {
   sendCommand ("ATH0");
-  SDCardRW.stopRec();
   delay(OKTime_);
   readResp(OKTime_);
 }
 
 String GSM::info() {
-  SDCardRW.logToSD ("info", gsmLog) ;
+  DEBUGV("info\n") ;
   sendCommand ("AT+COPS?");
   readResp(OKTime_);
   return _buf;
 }
 
 String GSM::balance () {
-  SDCardRW.logToSD ("balance", gsmLog) ;
+  DEBUGV("balance\n") ;
   sendCommandAndWaitOK ("AT+CUSD=1,\"#100#\"");
   int tryCount = tryCount_;
   while (tryCount) {
@@ -63,7 +66,7 @@ String GSM::balance () {
 }
 
 void GSM::sendCommand (const char * command) {
-  SDCardRW.logToSD (String("com:") + command, gsmLog) ;
+  DEBUGV("com: %s" ,command) ;
   _port.printf("%s\n", command);
 }
 
@@ -76,9 +79,7 @@ void GSM::readResp(int time) {
       _buf += a;
     }
   }
-  
-  SDCardRW.logToSD ("resp:", gsmLog) ;
-  SDCardRW.logToSD (_buf, gsmLog) ;
+  DEBUGV("resp: %s" ,_buf.c_str()) ;
 }
 
 bool GSM::sendCommandAndWaitOK(const char * command) {
@@ -94,4 +95,4 @@ String GSM::getMessage( const char start, const char end, const int index) {
   if (i <= 0 || j <= 0) return String();
   return _buf.substring(i,j);
 }
-*/
+

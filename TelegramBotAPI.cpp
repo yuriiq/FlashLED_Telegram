@@ -1,7 +1,7 @@
 
 #include "TelegramBotAPI.h"
 
-#define DEBUGV(...) Serial.printf(__VA_ARGS__) 
+// #define DEBUGV(...) Serial.printf(__VA_ARGS__) 
 // ets_printf(__VA_ARGS__)
 
 #define host_ "api.telegram.org"

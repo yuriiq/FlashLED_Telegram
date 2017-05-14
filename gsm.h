@@ -1,7 +1,7 @@
 
 #ifndef GSM_H
 #define GSM_H
-/*
+
 #include <SoftwareSerial.h>
 
 extern const char * GSMRecFileName;
@@ -11,10 +11,11 @@ class GSM
 public:
     GSM(int rx, int tx);
     void begin(long speed);
-    void call(const String & tell, int timeout);
+    void call(const String & tell);
     String balance();
     String info();
     String lastMsg() const;
+    void hangup();
         
 private:
   void sendCommand (const char * command) ;
@@ -25,5 +26,4 @@ private:
   String _buf;
 };
 
-*/
 #endif

@@ -2,7 +2,7 @@
 
 #include "TelegramBotAPI.h"
 #include "SDCardRW.h"
-// #include "gsm.h"
+#include "gsm.h"
 #include <ESP8266WiFi.h>
 #include <WiFiClientSecure.h>
 
@@ -14,7 +14,7 @@
 
 WiFiClientSecure client;
 TelegramBotAPI bot(BOTtoken, client);
-// GSM gsm(D8, D9);
+GSM gsm(D8, D9);
 
 const unsigned int bot_mtbs =  3000; // mean time between scan messages
 unsigned long bot_lasttime = 0; // last time messages' scan has been done
@@ -51,7 +51,7 @@ void infoCommand() {
 }
 
 void balanceCommand() {
-//    bot.message.text = gsm.balance();
+    bot.message.text = gsm.balance();
     bot.sendMessage();
 }
 
@@ -73,10 +73,13 @@ void callCommand(const String & command) {
   int timeout = command.substring(indexTime).toInt();
   bot.message.text = String("Дозвон по номеру " + tell+ ", время ожидания: "+ timeout+ " сек.");
   bot.sendMessage();
-  handleRecord(timeout*1000);
+  gsm.hangup();
+  gsm.call(tell);
+  handleRecord(timeout * 1000);
+  gsm.hangup();
 }
 
-void recCommand() {
+void recSendCommand() {
   if (!bot.sendAudio(recFile)) {
     delay(10);
     bot.message.text = "Скачать: /rec";
@@ -96,7 +99,7 @@ void handleCommand() {
   else if (command == "/balance") balanceCommand();
   else if (command == "/info") infoCommand();
   else if (command.startsWith("/call")) callCommand(command);
-  else if (command.startsWith("/rec")) recCommand();
+  else if (command.startsWith("/rec")) recSendCommand();
   // else sendCommand  (bot.message.text);  
 }
 
@@ -108,7 +111,7 @@ void handleRecord(unsigned int timeout) {
   SDCardRW.stopRec();
   bot.message.text = "Дозвон окончен";
   bot.sendMessage();
-  recCommand();
+  recSendCommand();
 }
     
 void setup() {
