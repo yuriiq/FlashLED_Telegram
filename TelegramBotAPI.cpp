@@ -4,7 +4,7 @@
 #define DEBUGV(...) Serial.printf(__VA_ARGS__) 
 // ets_printf(__VA_ARGS__)
 
-#define host_ "api.telegram.org"
+const char * host_ = "api.telegram.org";
 const byte tryCount_ = 5;
 const unsigned short sslPort_ = 443;
 const unsigned short bufferSize_ = 1024 ;

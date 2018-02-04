@@ -1,4 +1,3 @@
-
 #include "gsm.h"
 #include <Arduino.h>
 
@@ -7,8 +6,6 @@
 const int USSDTime_ = 1000;
 const int OKTime_ = 100;
 const int tryCount_ = 5;  
-
-
 
 GSM::GSM(int rx, int tx) : _port(rx, tx) { 
 

@@ -23,7 +23,7 @@ enum KeyboardType {
   resizeFlag = 0x2, 
   oneTimeFlag = 0x4,
   selectiveFlag = 0x8
-} ;
+};
 
 struct TelegramMessage
 {
@@ -44,6 +44,7 @@ class TelegramBotAPI
     bool sendMessageWithKeyboard(const JsonArray & keyboardBuffer, KeyboardType keyboardType) const;
     bool sendChatAction(ActionType action) const;   
     TelegramMessage message;
+    
   private:
     bool sendPostMessage(const JsonObject& payload) const;
     bool sendGetMessage(const String& getCommand) const ;

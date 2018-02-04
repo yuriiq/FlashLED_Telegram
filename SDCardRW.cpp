@@ -2,8 +2,9 @@
 #include "SDCardRW.h"
 #include <SD.h>
 #include <time.h>
-
 #define DEBUGV(...) Serial.printf(__VA_ARGS__) 
+
+const int updateRate = 8000;
 
 struct WavHeader
 {    
@@ -14,17 +15,17 @@ struct WavHeader
     const unsigned int subchunk1Size = 16;
     const unsigned short audioFormat = 1;
     const unsigned short numChannels = 1;
-    const unsigned int sampleRate = UPDATE_RATE;
-    const unsigned int byteRate = UPDATE_RATE; // _header.byteRate = _header.sampleRate * _header.numChannels * _header.bitsPerSample/8;
+    const unsigned int sampleRate = updateRate;
+    const unsigned int byteRate = updateRate; // _header.byteRate = _header.sampleRate * _header.numChannels * _header.bitsPerSample/8;
     const unsigned short blockAlign = 1;
     const unsigned short bitsPerSample = 8;
     const char subchunk2Id[4] = { 'd', 'a', 't', 'a'} ;
     unsigned int subchunk2Size ;
 };
 
-#define SDFileLog "SDLog.txt" 
+const char * SDFileLog = "SDLog.txt";
 int _numSamples = -1; 
-const int sampleTime = ESP.getCpuFreqMHz() * 1000000 / UPDATE_RATE;
+const int sampleTime = ESP.getCpuFreqMHz() * 1000000 / updateRate;
 File _recFile;
 
 void corectFileName(String & fileName); 

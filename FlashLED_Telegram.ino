@@ -1,15 +1,9 @@
-#define DEBUGV(...) Serial.printf (__VA_ARGS__)
-
+#include "settings.h"
 #include "TelegramBotAPI.h"
 #include "SDCardRW.h"
 #include "gsm.h"
 #include <ESP8266WiFi.h>
 #include <WiFiClientSecure.h>
-
-
-#define SETTINGS_FILE "settings.txt"
-#define BOTtoken "316201411:AAHL3pewSswc7-XHGcjmhx3gyu5DdvSSNdU"
-#define recFile  "test2.wav"
 
 WiFiClientSecure client;
 TelegramBotAPI bot(BOTtoken, client);
@@ -35,7 +29,7 @@ void WiFiReconnect()
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(); delay(100);
   // attempt to connect to Wifi network:
-  const Settings settings = SDCardRW.getSettings(SETTINGS_FILE);
+  const Settings settings = SDCardRW.getSettings(settingsFileName);
   DEBUGV("\nConnecting Wifi: ");
   WiFi.begin(settings.SSID.c_str(), settings.PASS.c_str());
   while (WiFi.status() != WL_CONNECTED) {
@@ -118,9 +112,10 @@ void handleCommand() {
 }
 
 void setup() {
-  Serial.begin(4800);
+  const int speed = 4800;
+  Serial.begin(speed);
   SDCardRW.setupSD();
-  gsm.begin(4800);
+  gsm.begin(speed);
 }
 
 void loop() {
